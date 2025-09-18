@@ -1,0 +1,33 @@
+{
+  "name": "employee-onboarding-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for employee onboarding workflow management",
+  "type": "module",
+  "main": "build/index.js",
+  "scripts": {
+    "build": "tsc && node -e \"require('fs').chmodSync('build/index.js', '755')\"",
+    "dev": "tsc --watch",
+    "start": "node build/index.js",
+    "test": "echo \"Tests coming soon...\" && exit 0"
+  },
+  "keywords": [
+    "mcp",
+    "onboarding",
+    "employee",
+    "workflow",
+    "microsoft"
+  ],
+  "author": "Your Organization",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^0.4.0",
+    "axios": "^1.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
