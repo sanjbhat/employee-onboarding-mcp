@@ -138,9 +138,6 @@ If you prefer manual setup, add to your MCP settings:
 }
 ```
 
-**Claude Desktop:**
-Same format, add to `%APPDATA%\Claude\claude_desktop_config.json`
-
 ## 📊 Data Storage
 
 - **Employee profiles**: JSON files in `data/employees/`

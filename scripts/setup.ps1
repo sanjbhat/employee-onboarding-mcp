@@ -48,15 +48,6 @@ function Get-ClineConfigPath {
     return $null
 }
 
-# Function to get Claude Desktop config path
-function Get-ClaudeConfigPath {
-    $claudeConfig = "$env:APPDATA\Claude\claude_desktop_config.json"
-    if (Test-Path $claudeConfig) {
-        return $claudeConfig
-    }
-    return $null
-}
-
 # Check prerequisites
 Write-Host "🔍 Checking prerequisites..." -ForegroundColor Yellow
 
@@ -147,7 +138,6 @@ Write-Host ""
 Write-Host "🤖 Configuring AI assistants..." -ForegroundColor Yellow
 
 $buildPath = Join-Path $McpRoot "build" "index.js"
-$configuredAny = $false
 
 # Configure Cline
 $clineConfigPath = Get-ClineConfigPath
@@ -183,49 +173,9 @@ if ($clineConfigPath) {
         Write-Host "❌ Failed to configure Cline: $_" -ForegroundColor Red
     }
 } else {
-    Write-Host "⚠️ Cline not found. Install the Cline extension in VS Code if you want to use it." -ForegroundColor Yellow
+    Write-Host "⚠️ Cline not found. Install the Cline extension in VS Code if you want to use it. More information at aka.ms/cline" -ForegroundColor Yellow
 }
 
-# Configure Claude Desktop
-$claudeConfigPath = Get-ClaudeConfigPath
-if ($claudeConfigPath) {
-    Write-Host "📝 Configuring Claude Desktop..." -ForegroundColor Cyan
-    
-    try {
-        $claudeConfig = @{}
-        if (Test-Path $claudeConfigPath) {
-            $claudeConfig = Get-Content $claudeConfigPath | ConvertFrom-Json -AsHashtable
-        }
-        
-        if (-not $claudeConfig.ContainsKey("mcpServers")) {
-            $claudeConfig["mcpServers"] = @{}
-        }
-        
-        $claudeConfig["mcpServers"]["employee-onboarding"] = @{
-            command = "node"
-            args = @($buildPath)
-            env = @{
-                ONBOARDING_DATA_PATH = $DataPath
-                ONBOARDING_CONFIG_PATH = $ConfigPath
-            }
-        }
-        
-        $claudeConfig | ConvertTo-Json -Depth 10 | Set-Content $claudeConfigPath -Encoding UTF8
-        Write-Host "✅ Claude Desktop configuration updated!" -ForegroundColor Green
-        $configuredAny = $true
-    }
-    catch {
-        Write-Host "❌ Failed to configure Claude Desktop: $_" -ForegroundColor Red
-    }
-} else {
-    Write-Host "⚠️ Claude Desktop not found. Install Claude Desktop if you want to use it." -ForegroundColor Yellow
-}
-
-if (-not $configuredAny) {
-    Write-Host "⚠️ No AI assistants found. Please install either:" -ForegroundColor Yellow
-    Write-Host "   - Cline extension for VS Code" -ForegroundColor Yellow
-    Write-Host "   - Claude Desktop application" -ForegroundColor Yellow
-}
 
 # Test the MCP server
 Write-Host ""
