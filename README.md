@@ -169,5 +169,3 @@ If you prefer manual setup, add to your MCP settings:
 ---
 #### 📜 License
 MIT License - Feel free to customize for your organization's needs.
-
-

@@ -167,7 +167,6 @@ if ($clineConfigPath) {
         
         $clineConfig | ConvertTo-Json -Depth 10 | Set-Content $clineConfigPath -Encoding UTF8
         Write-Host "✅ Cline configuration updated!" -ForegroundColor Green
-        $configuredAny = $true
     }
     catch {
         Write-Host "❌ Failed to configure Cline: $_" -ForegroundColor Red
@@ -242,12 +241,10 @@ Write-Host "✅ AI assistant configurations updated" -ForegroundColor Green
 Write-Host "✅ Sample employee profile created for testing" -ForegroundColor Green
 Write-Host ""
 Write-Host "🚀 Next Steps:" -ForegroundColor Cyan
-Write-Host "1. Restart your AI assistant (VS Code/Claude Desktop)" -ForegroundColor White
+Write-Host "1. Restart your AI assistant (VS Code Desktop)" -ForegroundColor White
 Write-Host "2. Try asking: 'Help me start my onboarding process'" -ForegroundColor White
 Write-Host "3. Or ask: 'What onboarding tools are available?'" -ForegroundColor White
 Write-Host ""
 Write-Host "📖 For more information, see:" -ForegroundColor Cyan
 Write-Host "   - README.md - Overview and usage instructions" -ForegroundColor White
 Write-Host "   - docs/onboarding-buddy-guide.md - Configuration guide" -ForegroundColor White
-Write-Host ""
-Write-Host "Need help? Contact your IT team or check the documentation!" -ForegroundColor Yellow

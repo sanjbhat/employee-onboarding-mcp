@@ -7,15 +7,14 @@ export interface OnboardingStep {
   description: string;
   type: string;
   required: boolean;
-  htmlContent: string;
+  content: string;
+  isMarkdown: boolean;
   resources?: string[];
   completionCriteria?: string;
 }
 
 export interface OnboardingConfig {
   steps: OnboardingStep[];
-  resources: Record<string, string>;
-  templates: Record<string, string>;
 }
 
 export class ConfigParser {
@@ -23,42 +22,57 @@ export class ConfigParser {
     path.join(process.cwd(), 'config');
 
   /**
-   * Load all onboarding configuration from HTML files
+   * Load all onboarding configuration from Markdown and HTML files
    */
   static async loadConfiguration(): Promise<OnboardingConfig> {
     const stepsPath = path.join(this.configPath, 'steps');
-    const resourcesPath = path.join(this.configPath, 'resources');
-    const templatesPath = path.join(this.configPath, 'templates');
 
-    const [steps, resources, templates] = await Promise.all([
-      this.loadSteps(stepsPath),
-      this.loadResources(resourcesPath),
-      this.loadTemplates(templatesPath)
-    ]);
+    const steps = await this.loadSteps(stepsPath);
 
     return {
-      steps: steps.sort((a, b) => a.id - b.id),
-      resources,
-      templates
+      steps: steps.sort((a, b) => a.id - b.id)
     };
   }
 
   /**
-   * Load step configurations from HTML files
+   * Load step configurations from Markdown and HTML files (prefer Markdown)
    */
   private static async loadSteps(stepsPath: string): Promise<OnboardingStep[]> {
     try {
       const files = await fs.readdir(stepsPath);
-      const htmlFiles = files.filter(f => f.endsWith('.html'));
       const steps: OnboardingStep[] = [];
+      const stepIds = new Set<number>();
 
-      for (const file of htmlFiles) {
+      // First, load Markdown files
+      const markdownFiles = files.filter(f => f.endsWith('.md'));
+      for (const file of markdownFiles) {
         try {
           const filePath = path.join(stepsPath, file);
           const content = await fs.readFile(filePath, 'utf-8');
-          const step = this.parseStepHTML(content, file);
+          const step = this.parseStepMarkdown(content, file);
           if (step) {
             steps.push(step);
+            stepIds.add(step.id);
+          }
+        } catch (error) {
+          console.warn(`Failed to load step file ${file}:`, error);
+        }
+      }
+
+      // Then, load HTML files only for steps that don't have Markdown versions
+      const htmlFiles = files.filter(f => f.endsWith('.html'));
+      for (const file of htmlFiles) {
+        try {
+          const idMatch = file.match(/step-(\d+)/);
+          const id = idMatch ? parseInt(idMatch[1]) : 0;
+          
+          if (!stepIds.has(id)) {
+            const filePath = path.join(stepsPath, file);
+            const content = await fs.readFile(filePath, 'utf-8');
+            const step = this.parseStepHTML(content, file);
+            if (step) {
+              steps.push(step);
+            }
           }
         } catch (error) {
           console.warn(`Failed to load step file ${file}:`, error);
@@ -69,6 +83,54 @@ export class ConfigParser {
     } catch (error) {
       console.warn('Failed to load steps directory:', error);
       return [];
+    }
+  }
+
+  /**
+   * Parse individual step Markdown file
+   */
+  private static parseStepMarkdown(content: string, filename: string): OnboardingStep | null {
+    try {
+      // Extract step ID from filename (e.g., "step-1-account-setup.md" -> 1)
+      const idMatch = filename.match(/step-(\d+)/);
+      const id = idMatch ? parseInt(idMatch[1]) : 0;
+
+      // Extract title from first # heading
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      const title = titleMatch ? titleMatch[1].trim() : `Step ${id}`;
+
+      // Extract description from content after title and before first ##
+      const descMatch = content.match(/^#\s+.+?\n\n(.+?)(?=\n##|\n\n##|$)/s);
+      const description = descMatch ? descMatch[1].trim().split('\n')[0] : '';
+
+      // Extract step type and required status from header line
+      const headerMatch = content.match(/\*\*Step \d+ of \d+\*\*\s*\|\s*\*\*(.+?)\*\*/);
+      const isRequired = headerMatch ? headerMatch[1].toLowerCase().includes('required') : true;
+      
+      // Default type for markdown files
+      const type = 'general';
+
+      // Extract completion criteria section
+      const criteriaMatch = content.match(/##\s+This step is complete when:(.*?)(?=\n##|$)/s);
+      const completionCriteria = criteriaMatch ? criteriaMatch[1].trim() : undefined;
+
+      // Extract resource links (already in markdown format)
+      const resourceLinks = this.extractMarkdownLinks(content);
+
+      return {
+        id,
+        title,
+        description,
+        type,
+        required: isRequired,
+        content: content,
+        isMarkdown: true,
+        resources: resourceLinks.length > 0 ? resourceLinks : undefined,
+        completionCriteria
+      };
+    } catch (error) {
+      console.warn(`Failed to parse step Markdown ${filename}:`, error);
+      return null;
     }
   }
 
@@ -110,7 +172,8 @@ export class ConfigParser {
         description,
         type,
         required,
-        htmlContent: content,
+        content: content,
+        isMarkdown: false,
         resources: resourceLinks.length > 0 ? resourceLinks : undefined,
         completionCriteria
       };
@@ -120,59 +183,6 @@ export class ConfigParser {
     }
   }
 
-  /**
-   * Load resource HTML files
-   */
-  private static async loadResources(resourcesPath: string): Promise<Record<string, string>> {
-    try {
-      const files = await fs.readdir(resourcesPath);
-      const htmlFiles = files.filter(f => f.endsWith('.html'));
-      const resources: Record<string, string> = {};
-
-      for (const file of htmlFiles) {
-        try {
-          const filePath = path.join(resourcesPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const resourceName = path.basename(file, '.html');
-          resources[resourceName] = content;
-        } catch (error) {
-          console.warn(`Failed to load resource file ${file}:`, error);
-        }
-      }
-
-      return resources;
-    } catch (error) {
-      console.warn('Failed to load resources directory:', error);
-      return {};
-    }
-  }
-
-  /**
-   * Load template HTML files
-   */
-  private static async loadTemplates(templatesPath: string): Promise<Record<string, string>> {
-    try {
-      const files = await fs.readdir(templatesPath);
-      const htmlFiles = files.filter(f => f.endsWith('.html'));
-      const templates: Record<string, string> = {};
-
-      for (const file of htmlFiles) {
-        try {
-          const filePath = path.join(templatesPath, file);
-          const content = await fs.readFile(filePath, 'utf-8');
-          const templateName = path.basename(file, '.html');
-          templates[templateName] = content;
-        } catch (error) {
-          console.warn(`Failed to load template file ${file}:`, error);
-        }
-      }
-
-      return templates;
-    } catch (error) {
-      console.warn('Failed to load templates directory:', error);
-      return {};
-    }
-  }
 
   /**
    * Get specific step by ID
@@ -190,40 +200,45 @@ export class ConfigParser {
     return config.steps;
   }
 
-  /**
-   * Get resource content by name
-   */
-  static async getResource(resourceName: string): Promise<string | null> {
-    const config = await this.loadConfiguration();
-    return config.resources[resourceName] || null;
-  }
 
   /**
    * Format step content for AI display
    */
   static formatStepForAI(step: OnboardingStep): string {
-    let formatted = `# ${step.title}\n\n`;
-    
-    if (step.description) {
-      formatted += `${step.description}\n\n`;
+    if (step.isMarkdown) {
+      // For Markdown files, return the content as-is since it's already properly formatted
+      return step.content;
+    } else {
+      // For HTML files, convert to readable text format
+      let formatted = `# ${step.title}\n\n`;
+      
+      if (step.description) {
+        formatted += `${step.description}\n\n`;
+      }
+
+      // Convert HTML to readable text
+      const textContent = this.stripHTML(step.content);
+      formatted += textContent;
+
+      return formatted;
+    }
+  }
+
+  /**
+   * Extract resource links from Markdown content
+   */
+  private static extractMarkdownLinks(markdown: string): string[] {
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
+    const links: string[] = [];
+    let match;
+
+    while ((match = linkRegex.exec(markdown)) !== null) {
+      const text = match[1];
+      const url = match[2];
+      links.push(`[${text}](${url})`);
     }
 
-    // Convert HTML to readable text
-    const textContent = this.stripHTML(step.htmlContent);
-    formatted += textContent;
-
-    if (step.completionCriteria) {
-      formatted += `\n\n**Completion Criteria:** ${step.completionCriteria}`;
-    }
-
-    if (step.resources && step.resources.length > 0) {
-      formatted += `\n\n**Resources:**\n`;
-      step.resources.forEach(resource => {
-        formatted += `- ${resource}\n`;
-      });
-    }
-
-    return formatted;
+    return links;
   }
 
   /**
