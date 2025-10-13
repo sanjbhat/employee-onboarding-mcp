@@ -60,10 +60,10 @@ AI: "John is on Step 3 with 67% completion. He completed account setup and SAW d
 
 ### HTML Step Configuration
 
-Steps are configured using HTML files in `config/steps/`:
+Steps are configured using markdown/html files in `config/steps/`:
 **For Onboarding Buddies**: This folder is where you can add your team specific on-boarding steps in html format.
-- Edit HTML files in config/steps/ to customize onboarding steps
-- Update resource files in config/resources/ to add new links/videos
+- Edit HTML/Markdown files in config/steps/ to customize onboarding steps
+- Update resource files in config/resources/ to add new links/videos or even use a url.
 
 ```html
 <div class="onboarding-step" data-step-id="1" data-step-type="account_setup">
@@ -99,7 +99,6 @@ employee-onboarding-mcp/
 ├── config/                       # HTML configuration files
 │   ├── steps/                    # Onboarding step definitions
 │   ├── resources/                # Wiki links, videos, etc.
-│   └── templates/                # HTML templates
 ├── data/                         # Employee progress data
 │   ├── employees/                # Individual progress files
 │   └── backups/                  # Automated backups
